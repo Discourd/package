@@ -1,15 +1,16 @@
 {
   "name": "ipa-ota-server",
   "version": "1.0.0",
+  "description": "iOS IPA OTA Installer Site",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.10",
-    "bplist-parser": "^0.3.2",
     "express": "^4.18.2",
+    "fs-extra": "^11.1.1",
     "multer": "^1.4.5-lts.1",
-    "socket.io": "^4.7.5"
+    "socket.io": "^4.7.2"
   }
 }
