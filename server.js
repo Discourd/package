@@ -1,4 +1,6 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const multer = require('multer');
 const AdmZip = require('adm-zip');
 const bplist = require('bplist-parser');
@@ -6,9 +8,25 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static('public'));
+
+// リアルタイム接続人数のカウント
+let onlineUsers = 0;
+
+io.on('connection', (socket) => {
+  onlineUsers++;
+  io.emit('userCount', onlineUsers); // 全クライアントへ現在の人数を送信
+
+  socket.on('disconnect', () => {
+    onlineUsers = Math.max(0, onlineUsers - 1);
+    io.emit('userCount', onlineUsers);
+  });
+});
 
 const uploadDir = path.join(__dirname, 'public/uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -34,7 +52,6 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
 
     const savedIpaPath = path.join(targetFolder, 'app.ipa');
     
-    // 一時ファイルを安全にコピー＆削除
     fs.copyFileSync(tempFilePath, savedIpaPath);
     try {
       fs.unlinkSync(tempFilePath);
@@ -42,7 +59,6 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
       console.warn('一時ファイルの削除に失敗:', e);
     }
 
-    // ZIPとしてIPAをオープン
     let zip;
     try {
       zip = new AdmZip(savedIpaPath);
@@ -53,7 +69,6 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
 
     const zipEntries = zip.getEntries();
 
-    // 1. Info.plist を検索・パース
     const infoPlistEntry = zipEntries.find(entry => 
       /^Payload\/[^\/]+\.app\/Info\.plist$/i.test(entry.entryName)
     );
@@ -93,7 +108,6 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
     const bundleVersion = plistData.CFBundleShortVersionString || plistData.CFBundleVersion || '1.0.0';
     const appName = plistData.CFBundleDisplayName || plistData.CFBundleName || 'App';
 
-    // 2. 署名書（embedded.mobileprovision）の抽出
     const provisionEntry = zipEntries.find(entry => 
       /^Payload\/[^\/]+\.app\/embedded\.mobileprovision$/i.test(entry.entryName)
     );
@@ -105,7 +119,6 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
       provisionUrl = `${baseUrl}/uploads/${fileId}/embedded.mobileprovision`;
     }
 
-    // 3. manifest.plist の生成
     const ipaUrl = `${baseUrl}/uploads/${fileId}/app.ipa`;
     const manifestContent = generateManifestXml(ipaUrl, bundleId, bundleVersion, appName);
     
@@ -120,7 +133,7 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
       bundleId,
       version: bundleVersion,
       installUrl,
-      provisionUrl // 署名書ダウンロードURL
+      provisionUrl
     });
 
   } catch (error) {
@@ -163,6 +176,7 @@ function generateManifestXml(ipaUrl, bundleId, version, appName) {
 </plist>`;
 }
 
-app.listen(PORT, () => {
+// app.listen から server.listen に変更
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
