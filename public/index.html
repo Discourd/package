@@ -11,9 +11,9 @@
       --text: #1c1c1e;
       --sub-text: #8e8e93;
       --primary: #007aff;
-      --primary-hover: #0056b3;
       --border: #e5e5ea;
       --success: #34c759;
+      --secondary: #5856d6;
       --danger: #ff3b30;
     }
 
@@ -30,11 +30,7 @@
       min-height: 100vh;
     }
 
-    .container {
-      width: 100%;
-      max-width: 480px;
-    }
-
+    .container { width: 100%; max-width: 480px; }
     .card {
       background: var(--card-bg);
       border-radius: 20px;
@@ -42,19 +38,8 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
     }
 
-    h1 {
-      font-size: 22px;
-      font-weight: 700;
-      margin: 0 0 8px 0;
-      text-align: center;
-    }
-
-    p.subtitle {
-      color: var(--sub-text);
-      font-size: 14px;
-      text-align: center;
-      margin: 0 0 24px 0;
-    }
+    h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px 0; text-align: center; }
+    p.subtitle { color: var(--sub-text); font-size: 14px; text-align: center; margin: 0 0 24px 0; }
 
     .drop-zone {
       border: 2px dashed var(--border);
@@ -62,36 +47,13 @@
       padding: 32px 16px;
       text-align: center;
       cursor: pointer;
-      transition: all 0.2s ease;
       background-color: #fafafa;
     }
 
-    .drop-zone:hover, .drop-zone.dragover {
-      border-color: var(--primary);
-      background-color: rgba(0, 122, 255, 0.04);
-    }
-
-    .drop-icon {
-      font-size: 40px;
-      margin-bottom: 12px;
-      display: block;
-    }
-
-    .drop-text {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .drop-hint {
-      font-size: 12px;
-      color: var(--sub-text);
-      margin-top: 4px;
-    }
-
-    input[type="file"] {
-      display: none;
-    }
+    .drop-icon { font-size: 40px; margin-bottom: 12px; display: block; }
+    .drop-text { font-size: 15px; font-weight: 600; }
+    .drop-hint { font-size: 12px; color: var(--sub-text); margin-top: 4px; }
+    input[type="file"] { display: none; }
 
     .file-info {
       display: none;
@@ -115,97 +77,42 @@
       font-weight: 600;
       cursor: pointer;
       margin-top: 20px;
-      transition: background 0.2s ease, transform 0.1s ease;
     }
 
-    .btn:active {
-      transform: scale(0.98);
-    }
+    .btn:disabled { background: #c7c7cc; cursor: not-allowed; }
 
-    .btn:disabled {
-      background: #c7c7cc;
-      cursor: not-allowed;
-      transform: none;
-    }
+    .progress-container { display: none; margin-top: 24px; }
+    .progress-bar-bg { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; width: 0%; background: var(--primary); transition: width 0.3s ease; }
+    .status-text { font-size: 13px; color: var(--sub-text); margin-top: 8px; text-align: center; font-weight: 500; }
 
-    /* プログレスバー */
-    .progress-container {
-      display: none;
-      margin-top: 24px;
-    }
-
-    .progress-bar-bg {
-      height: 8px;
-      background: var(--border);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      width: 0%;
-      background: var(--primary);
-      transition: width 0.3s ease;
-    }
-
-    .status-text {
-      font-size: 13px;
-      color: var(--sub-text);
-      margin-top: 8px;
-      text-align: center;
-      font-weight: 500;
-    }
-
-    /* 結果エリア */
     .result-container {
       display: none;
       margin-top: 24px;
       padding-top: 24px;
       border-top: 1px solid var(--border);
-      animation: fadeIn 0.3s ease;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .app-title {
-      font-size: 18px;
-      font-weight: 700;
-      text-align: center;
-      margin-bottom: 12px;
-    }
-
-    .info-group {
-      background: var(--bg);
-      border-radius: 12px;
-      padding: 12px 16px;
-      margin-bottom: 16px;
-    }
-
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-      padding: 4px 0;
-    }
-
+    .app-title { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 12px; }
+    .info-group { background: var(--bg); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; }
+    .info-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
     .info-label { color: var(--sub-text); }
     .info-value { font-weight: 600; }
 
-    .install-btn {
+    .action-btn {
       display: block;
       text-align: center;
       text-decoration: none;
-      background: var(--success);
       color: white;
       padding: 14px;
       border-radius: 12px;
       font-weight: 700;
-      font-size: 16px;
-      box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3);
+      font-size: 15px;
+      margin-bottom: 10px;
     }
+
+    .install-btn { background: var(--success); box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3); }
+    .provision-btn { background: var(--secondary); box-shadow: 0 4px 12px rgba(88, 86, 214, 0.3); }
 
     .error-msg {
       display: none;
@@ -224,7 +131,7 @@
 <div class="container">
   <div class="card">
     <h1>IPA OTA 配信ツール</h1>
-    <p class="subtitle">iOSアプリのインストールリンクを発行</p>
+    <p class="subtitle">iOSアプリのインストール & 署名書発行</p>
 
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('ipaFile').click()">
       <span class="drop-icon">📦</span>
@@ -237,7 +144,6 @@
 
     <button class="btn" id="uploadBtn" onclick="uploadIpa()" disabled>アップロード & 解析</button>
 
-    <!-- プログレス表示 -->
     <div class="progress-container" id="progressContainer">
       <div class="progress-bar-bg">
         <div class="progress-bar-fill" id="progressBar"></div>
@@ -247,7 +153,6 @@
 
     <div class="error-msg" id="errorMsg"></div>
 
-    <!-- 解析結果エリア -->
     <div class="result-container" id="resultContainer">
       <div class="app-title" id="resAppName">App Name</div>
       
@@ -262,7 +167,8 @@
         </div>
       </div>
 
-      <a id="installLink" href="#" class="install-btn">iOS端末でインストール</a>
+      <a id="installLink" href="#" class="action-btn install-btn">iOS端末でインストール</a>
+      <a id="provisionLink" href="#" class="action-btn provision-btn" style="display: none;" download>署名書 (.mobileprovision) を取得</a>
     </div>
   </div>
 </div>
@@ -279,41 +185,13 @@
   }
 
   function showFileInfo(name) {
-    const fileInfo = document.getElementById('fileInfo');
-    fileInfo.innerText = `選択中: ${name}`;
-    fileInfo.style.display = 'block';
+    document.getElementById('fileInfo').innerText = `選択中: ${name}`;
+    document.getElementById('fileInfo').style.display = 'block';
     document.getElementById('uploadBtn').disabled = false;
-    hideError();
+    document.getElementById('errorMsg').style.display = 'none';
     document.getElementById('resultContainer').style.display = 'none';
   }
 
-  // ドラッグ＆ドロップ処理
-  const dropZone = document.getElementById('dropZone');
-  ['dragenter', 'dragover'].forEach(eventName => {
-    dropZone.addEventListener(eventName, (e) => {
-      e.preventDefault();
-      dropZone.classList.add('dragover');
-    }, false);
-  });
-  ['dragleave', 'drop'].forEach(eventName => {
-    dropZone.addEventListener(eventName, (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('dragover');
-    }, false);
-  });
-  dropZone.addEventListener('drop', handleFileSelect, false);
-
-  function showError(msg) {
-    const err = document.getElementById('errorMsg');
-    err.innerText = msg;
-    err.style.display = 'block';
-  }
-
-  function hideError() {
-    document.getElementById('errorMsg').style.display = 'none';
-  }
-
-  // アップロード処理
   function uploadIpa() {
     if (!selectedFile) return;
 
@@ -322,70 +200,52 @@
     const progressBar = document.getElementById('progressBar');
     const statusText = document.getElementById('statusText');
     const resultContainer = document.getElementById('resultContainer');
+    const provisionLink = document.getElementById('provisionLink');
 
     btn.disabled = true;
     progressContainer.style.display = 'block';
     resultContainer.style.display = 'none';
-    hideError();
 
     const formData = new FormData();
     formData.append('ipa', selectedFile);
 
     const xhr = new XMLHttpRequest();
+    let uploadUrl = window.location.protocol.startsWith('http') ? `${window.location.origin}/upload` : '/upload';
 
-    // 安全なエンドポイントURLの組み立て
-    let uploadUrl = '/upload';
-    if (window.location.protocol.startsWith('http')) {
-      uploadUrl = `${window.location.origin}/upload`;
-    }
+    xhr.open('POST', uploadUrl, true);
 
-    try {
-      xhr.open('POST', uploadUrl, true);
-    } catch (e) {
-      showError('リクエストの作成に失敗しました: ' + e.message);
-      btn.disabled = false;
-      return;
-    }
-
-    // 進捗（プログレス）イベントの検知
     xhr.upload.onprogress = function(e) {
       if (e.lengthComputable) {
         const percent = Math.round((e.loaded / e.total) * 100);
         progressBar.style.width = percent + '%';
-        if (percent < 100) {
-          statusText.innerText = `アップロード中... ${percent}%`;
-        } else {
-          statusText.innerText = 'IPAを解凍 & Info.plist 解析中...';
-        }
+        statusText.innerText = percent < 100 ? `アップロード中... ${percent}%` : '解析 & 署名書抽出中...';
       }
     };
 
     xhr.onload = function() {
       btn.disabled = false;
       if (xhr.status === 200) {
-        try {
-          const res = JSON.parse(xhr.responseText);
-          if (res.success) {
-            statusText.innerText = '処理完了！';
-            document.getElementById('resAppName').innerText = res.appName;
-            document.getElementById('resBundleId').innerText = res.bundleId;
-            document.getElementById('resVersion').innerText = res.version;
-            document.getElementById('installLink').href = res.installUrl;
-            resultContainer.style.display = 'block';
+        const res = JSON.parse(xhr.responseText);
+        if (res.success) {
+          statusText.innerText = '処理完了！';
+          document.getElementById('resAppName').innerText = res.appName;
+          document.getElementById('resBundleId').innerText = res.bundleId;
+          document.getElementById('resVersion').innerText = res.version;
+          document.getElementById('installLink').href = res.installUrl;
+
+          if (res.provisionUrl) {
+            provisionLink.href = res.provisionUrl;
+            provisionLink.style.display = 'block';
           } else {
-            showError('解析エラーが発生しました。');
+            provisionLink.style.display = 'none';
           }
-        } catch(err) {
-          showError('サーバーからのレスポンス解析に失敗しました。');
+
+          resultContainer.style.display = 'block';
         }
       } else {
-        showError(`エラー (${xhr.status}): ${xhr.responseText || 'アップロードに失敗しました。'}`);
+        document.getElementById('errorMsg').innerText = `エラー: ${xhr.responseText}`;
+        document.getElementById('errorMsg').style.display = 'block';
       }
-    };
-
-    xhr.onerror = function() {
-      btn.disabled = false;
-      showError('通信エラーが発生しました。ネットワークまたはサーバー状態を確認してください。');
     };
 
     xhr.send(formData);
