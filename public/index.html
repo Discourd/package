@@ -33,7 +33,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px 15px 90px 15px; /* 下部ナビゲーション被り防止 */
+      padding: 20px 15px 90px 15px;
     }
 
     .container {
@@ -41,7 +41,6 @@
       max-width: 600px;
     }
 
-    /* タブ切り替えアニメーション */
     .tab-content {
       display: none;
       animation: fadeIn 0.3s ease-in-out;
@@ -393,7 +392,6 @@
       margin-bottom: 6px;
     }
 
-    /* タイムライン表示 */
     .log-item {
       position: relative;
       padding-left: 20px;
@@ -445,7 +443,6 @@
       margin-top: 4px;
     }
 
-    /* ナビゲーションバー */
     .bottom-nav {
       position: fixed;
       bottom: 0;
@@ -511,7 +508,6 @@
 
     <div id="error-msg" class="error-msg"></div>
 
-    <!-- ==================== タブ1: ホーム ==================== -->
     <div id="tab-home" class="tab-content active">
       <div class="profile-card">
         <div class="profile-title">
@@ -578,7 +574,6 @@
       </div>
     </div>
 
-    <!-- ==================== タブ2: 説明ガイド ==================== -->
     <div id="tab-guide" class="tab-content">
       <div class="section-card">
         <div class="section-header">
@@ -658,7 +653,6 @@
       </div>
     </div>
 
-    <!-- ==================== タブ3: アップデートログ ==================== -->
     <div id="tab-logs" class="tab-content">
       <div class="section-card">
         <div class="section-header">
@@ -722,28 +716,27 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // JSONからログを取得して動的生成
     async function loadUpdateLogs() {
       const container = document.getElementById('logs-container');
       try {
-        const response = await fetch('/logs.json');
-        if (!response.ok) throw new Error('ログファイルの取得に失敗しました');
+        const response = await fetch('/logs.json?v=' + new Date().getTime());
+        if (!response.ok) throw new Error('ログの読み込みに失敗しました');
         const logs = await response.json();
 
-        if (logs.length === 0) {
-          container.innerHTML = '<p style="text-align: center; color: var(--text-sub);">アプデログはありません。</p>';
+        if (!Array.isArray(logs) || logs.length === 0) {
+          container.innerHTML = '<p style="text-align: center; color: var(--text-sub);">ログはありません。</p>';
           return;
         }
 
         let html = '';
         logs.forEach(item => {
           const latestClass = item.isLatest ? 'latest' : '';
-          const listItems = item.changes.map(c => `<li>${c}</li>`).join('');
+          const listItems = (item.changes || []).map(c => `<li>${c}</li>`).join('');
 
           html += `
             <div class="log-item ${latestClass}">
-              <div class="log-date">${item.date}</div>
-              <div class="log-title">${item.version} - ${item.title}</div>
+              <div class="log-date">${item.date || ''}</div>
+              <div class="log-title">${item.version || ''} - ${item.title || ''}</div>
               <div class="log-desc">
                 <ul>${listItems}</ul>
               </div>
@@ -753,7 +746,7 @@
 
         container.innerHTML = html;
       } catch (err) {
-        container.innerHTML = `<p style="color: #ef4444; font-size: 0.85rem; text-align: center;">ログの読み込みエラー: ${err.message}</p>`;
+        container.innerHTML = `<p style="color: #ef4444; font-size: 0.85rem; text-align: center;">ログ読み込みエラー: ${err.message}</p>`;
       }
     }
 
