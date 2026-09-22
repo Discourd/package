@@ -15,7 +15,7 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST_URL || `http://localhost:${PORT}`;
 
-// ディレクトリの準備
+// ディレクトリ設定
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DOWNLOAD_DIR = path.join(PUBLIC_DIR, 'downloads');
@@ -24,12 +24,24 @@ fs.ensureDirSync(UPLOAD_DIR);
 fs.ensureDirSync(PUBLIC_DIR);
 fs.ensureDirSync(DOWNLOAD_DIR);
 
+// 静的ファイルの配信
 app.use(express.static(PUBLIC_DIR));
 
-// Multer設定
+// logs.json への直接アクセスを保証
+app.get('/logs.json', (req, res) => {
+  const logPath = path.join(PUBLIC_DIR, 'logs.json');
+  if (fs.existsSync(logPath)) {
+    res.setHeader('Content-Type', 'application/json');
+    res.sendFile(logPath);
+  } else {
+    res.status(404).json({ error: 'logs.json not found' });
+  }
+});
+
+// Multer (IPA一時アップロード)
 const upload = multer({ dest: UPLOAD_DIR });
 
-// 訪問者数とオンライン人数
+// Socket.IO リアルタイム統計
 let activeUsers = 0;
 let totalVisits = 0;
 
@@ -52,28 +64,28 @@ app.get('/download-dns', (req, res) => {
     res.setHeader('Content-Type', 'application/x-apple-asn1-signed-data');
     res.download(filePath, 'puri.mobileconfig');
   } else {
-    res.status(404).send('プロファイルファイルが見つかりません');
+    res.status(404).send('プロファイルが見つかりません');
   }
 });
 
-// IPAアップロード＆解析処理
+// IPA アップロード＆解析処理
 app.post('/upload', upload.single('ipa'), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ success: false, error: 'ファイルがアップロードされていません' });
+    return res.status(400).json({ success: false, error: 'ファイルが選択されていません' });
   }
 
   const ipaPath = req.file.path;
   const extractDir = path.join(UPLOAD_DIR, req.file.filename + '_extracted');
 
   try {
-    // IPA解凍
+    // IPAの解凍
     await fs.createReadStream(ipaPath)
       .pipe(unzipper.Extract({ path: extractDir }))
       .promise();
 
     const payloadDir = path.join(extractDir, 'Payload');
     if (!fs.existsSync(payloadDir)) {
-      throw new Error('IPA構造が無効です（Payloadフォルダが見つかりません）');
+      throw new Error('無効なIPAファイルです（Payloadフォルダが存在しません）');
     }
 
     const files = await fs.readdir(payloadDir);
@@ -85,7 +97,6 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
     const appPath = path.join(payloadDir, appFolder);
     const infoPlistPath = path.join(appPath, 'Info.plist');
 
-    // Info.plist の解析
     let appName = 'Unknown App';
     let bundleId = 'com.example.app';
     let version = '1.0';
@@ -98,7 +109,6 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
         bundleId = info.CFBundleIdentifier || bundleId;
         version = info.CFBundleShortVersionString || info.CFBundleVersion || version;
       } catch (e) {
-        // テキスト型plistの場合のフォールバック
         const content = await fs.readFile(infoPlistPath, 'utf8');
         const info = plist.parse(content);
         appName = info.CFBundleDisplayName || info.CFBundleName || appName;
@@ -107,7 +117,7 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
       }
     }
 
-    // ファイル移動と公開フォルダ作成
+    // 公開フォルダへ移動
     const appFileId = req.file.filename;
     const targetIpaPath = path.join(DOWNLOAD_DIR, `${appFileId}.ipa`);
     await fs.move(ipaPath, targetIpaPath, { overwrite: true });
@@ -158,7 +168,7 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
     const manifestPath = path.join(DOWNLOAD_DIR, `${appFileId}.plist`);
     await fs.writeFile(manifestPath, manifestContent, 'utf8');
 
-    // クリーンアップ
+    // 解凍作業用ディレクトリの削除
     await fs.remove(extractDir);
 
     const manifestUrl = `${HOST}/downloads/${appFileId}.plist`;
@@ -177,7 +187,7 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
     console.error('Processing error:', err);
     await fs.remove(extractDir).catch(() => {});
     await fs.remove(ipaPath).catch(() => {});
-    res.status(500).json({ success: false, error: err.message || '解析処理に失敗しました' });
+    res.status(500).json({ success: false, error: err.message || '解析に失敗しました' });
   }
 });
 
