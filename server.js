@@ -15,7 +15,6 @@ const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
 
 fs.ensureDirSync(UPLOAD_DIR);
 
-// .mobileconfig 配信時に正しいMIME Typeを設定
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.mobileconfig')) {
@@ -24,7 +23,6 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
-// オンライン人数カウント
 let onlineUsers = 0;
 io.on('connection', (socket) => {
   onlineUsers++;
@@ -36,7 +34,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Multer設定（2GBまでの大容量ファイルを許可）
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
@@ -46,10 +43,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 } // 2GB制限
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 }
 });
 
-// IPA処理API（省メモリ・ストリーミング処理）
 app.post('/upload', upload.single('ipa'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'ファイルが選択されていません' });
@@ -60,7 +56,6 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
   const extractDir = path.join(UPLOAD_DIR, 'extracted-' + Date.now());
 
   try {
-    // adm-zipの代わりにunzipperでメモリを抑えてストリーム解凍
     await fs.createReadStream(ipaPath)
       .pipe(unzipper.Extract({ path: extractDir }))
       .promise();
