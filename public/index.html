@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPA Distribution Tool</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: 0 auto; }
+    .box { border: 2px dashed #ccc; padding: 20px; text-align: center; margin-bottom: 20px; }
+    .btn { display: inline-block; padding: 12px 24px; background: #007aff; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold; }
+    #result { display: none; background: #f0f0f5; padding: 15px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+  <h2>IPA OTA配信ツール</h2>
+
+  <div class="box">
+    <input type="file" id="ipaFile" accept=".ipa"><br><br>
+    <button onclick="uploadIpa()">アップロード & 解析</button>
+  </div>
+
+  <div id="result">
+    <h3 id="appName"></h3>
+    <p>Bundle ID: <span id="bundleId"></span></p>
+    <p>Version: <span id="version"></span></p>
+    <a id="installBtn" href="" class="btn">iOS端末でインストール</a>
+  </div>
+
+  <script>
+    async function uploadIpa() {
+      const fileInput = document.getElementById('ipaFile');
+      if (!fileInput.files[0]) return alert('ファイルを選択してください');
+
+      const formData = new FormData();
+      formData.append('ipa', fileInput.files[0]);
+
+      const res = await fetch('/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.success) {
+        document.getElementById('appName').innerText = data.appName;
+        document.getElementById('bundleId').innerText = data.bundleId;
+        document.getElementById('version').innerText = data.version;
+        document.getElementById('installBtn').href = data.installUrl;
+        document.getElementById('result').style.display = 'block';
+      } else {
+        alert('エラーが発生しました');
+      }
+    }
+  </script>
+</body>
+</html>
