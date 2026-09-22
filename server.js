@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs-extra');
-const AdmZip = require('adm-zip');
+const unzipper = require('unzipper');
 
 const app = express();
 const server = http.createServer(app);
@@ -36,7 +36,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Multer設定
+// Multer設定（2GBまでの大容量ファイルを許可）
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
@@ -44,9 +44,12 @@ const storage = multer.diskStorage({
     cb(null, uniqueSub + '-' + file.originalname);
   }
 });
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 } // 2GB制限
+});
 
-// IPA処理API
+// IPA処理API（省メモリ・ストリーミング処理）
 app.post('/upload', upload.single('ipa'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'ファイルが選択されていません' });
@@ -57,8 +60,10 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
   const extractDir = path.join(UPLOAD_DIR, 'extracted-' + Date.now());
 
   try {
-    const zip = new AdmZip(ipaPath);
-    zip.extractAllTo(extractDir, true);
+    // adm-zipの代わりにunzipperでメモリを抑えてストリーム解凍
+    await fs.createReadStream(ipaPath)
+      .pipe(unzipper.Extract({ path: extractDir }))
+      .promise();
 
     const payloadPath = path.join(extractDir, 'Payload');
     if (!fs.existsSync(payloadPath)) {
