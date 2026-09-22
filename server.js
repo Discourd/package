@@ -1,198 +1,49 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs-extra');
-const unzipper = require('unzipper');
-
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-
-const PORT = process.env.PORT || 3000;
-const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
-const STATS_FILE = path.join(__dirname, 'stats.json');
-
-fs.ensureDirSync(UPLOAD_DIR);
-
-// 訪問者数の保存・読み込み処理
-let totalVisits = 0;
-if (fs.existsSync(STATS_FILE)) {
-  try {
-    const data = fs.readJsonSync(STATS_FILE);
-    totalVisits = data.totalVisits || 0;
-  } catch (e) {
-    totalVisits = 0;
-  }
-} else {
-  fs.writeJsonSync(STATS_FILE, { totalVisits: 0 });
-}
-
-function saveStats() {
-  fs.writeJsonSync(STATS_FILE, { totalVisits });
-}
-
-// 静的ファイルの配信設定
-app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.mobileconfig')) {
-      res.setHeader('Content-Type', 'application/x-apple-aspen-config');
-    } else if (filePath.endsWith('.plist')) {
-      res.setHeader('Content-Type', 'application/x-plist');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    } else if (filePath.endsWith('.ipa')) {
-      res.setHeader('Content-Type', 'application/octet-stream');
-    }
-  }
-}));
-
-// Socket.IO 通信処理
-let onlineUsers = 0;
-io.on('connection', (socket) => {
-  onlineUsers++;
-  
-  // 新規訪問としてトータルカウントを+1
-  totalVisits++;
-  saveStats();
-
-  // 接続時に現在のオンライン人数とトータル訪問数を送信
-  io.emit('userCount', onlineUsers);
-  io.emit('visitCount', totalVisits);
-
-  socket.on('disconnect', () => {
-    onlineUsers--;
-    io.emit('userCount', onlineUsers);
-  });
-});
-
-// Multer設定（2GB対応）
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const uniqueSub = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSub + '-' + file.originalname);
-  }
-});
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 }
-});
-
-// IPA処理API
-app.post('/upload', upload.single('ipa'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'ファイルが選択されていません' });
-  }
-
-  const ipaPath = req.file.path;
-  const fileName = req.file.filename;
-  const extractDir = path.join(UPLOAD_DIR, 'extracted-' + Date.now());
-
-  try {
-    await fs.createReadStream(ipaPath)
-      .pipe(unzipper.Extract({ path: extractDir }))
-      .promise();
-
-    const payloadPath = path.join(extractDir, 'Payload');
-    if (!fs.existsSync(payloadPath)) {
-      throw new Error('無効なIPAファイルです(Payloadフォルダなし)');
-    }
-
-    const appDirs = fs.readdirSync(payloadPath).filter(f => f.endsWith('.app'));
-    if (appDirs.length === 0) {
-      throw new Error('.app フォルダが見つかりません');
-    }
-
-    const appPath = path.join(payloadPath, appDirs[0]);
-    const infoPlistPath = path.join(appPath, 'Info.plist');
-    const provisionPath = path.join(appPath, 'embedded.mobileprovision');
-
-    let bundleId = 'com.example.app';
-    let version = '1.0';
-    let appName = appDirs[0].replace('.app', '');
-
-    if (fs.existsSync(infoPlistPath)) {
-      const plistContent = fs.readFileSync(infoPlistPath, 'utf8');
-      const bMatch = plistContent.match(/<key>CFBundleIdentifier<\/key>[\s\S]*?<string>(.*?)<\/string>/);
-      if (bMatch) bundleId = bMatch[1];
-
-      const vMatch = plistContent.match(/<key>CFBundleShortVersionString<\/key>[\s\S]*?<string>(.*?)<\/string>/);
-      if (vMatch) version = vMatch[1];
-
-      const nMatch = plistContent.match(/<key>CFBundleDisplayName<\/key>[\s\S]*?<string>(.*?)<\/string>/);
-      if (nMatch) appName = nMatch[1];
-    }
-
-    let provisionUrl = null;
-    if (fs.existsSync(provisionPath)) {
-      const provFileName = `provision-${Date.now()}.mobileprovision`;
-      const provDestPath = path.join(UPLOAD_DIR, provFileName);
-      await fs.copy(provisionPath, provDestPath);
-      provisionUrl = `/uploads/${provFileName}`;
-    }
-
-    const host = req.get('host');
-    const baseUrl = `https://${host}`;
-    const ipaDownloadUrl = `${baseUrl}/uploads/${fileName}`;
-
-    const manifestXml = `<?xml version="1.0" encoding="UTF-8"?>
+// 最強版 Apple検証通信ブロック用 DNSプロファイル (.mobileconfig) の配信API
+app.get('/download-dns', (req, res) => {
+  const configXml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>items</key>
-	<array>
-		<dict>
-			<key>assets</key>
-			<array>
-				<dict>
-					<key>kind</key>
-					<string>software-package</string>
-					<key>url</key>
-					<string>${ipaDownloadUrl}</string>
-				</dict>
-			</array>
-			<key>metadata</key>
-			<dict>
-				<key>bundle-identifier</key>
-				<string>${bundleId}</string>
-				<key>bundle-version</key>
-				<string>${version}</string>
-				<key>kind</key>
-				<string>software</string>
-				<key>title</key>
-				<string>${appName}</string>
-			</dict>
-		</dict>
-	</array>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>DNSSettings</key>
+            <dict>
+                <key>DNSProtocol</key>
+                <string>HTTPS</string>
+                <key>ServerURL</key>
+                <string>https://dns.nextdns.io</string>
+            </dict>
+            <key>PayloadDescription</key>
+            <string>Appleの証明書検証・ブラックリストチェック通信を強力にブロックします</string>
+            <key>PayloadDisplayName</key>
+            <string>Anti-Revoke 最強DNSプロファイル</string>
+            <key>PayloadIdentifier</key>
+            <string>com.anti-revoke.dns</string>
+            <key>PayloadType</key>
+            <string>com.apple.dnsSettings.managed</string>
+            <key>PayloadUUID</key>
+            <string>a8b2c3d4-e5f6-7890-abcd-ef1234567890</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+        </dict>
+    </array>
+    <key>PayloadDisplayName</key>
+    <string>Anti-Revoke / Blacklist Bypass DNS</string>
+    <key>PayloadIdentifier</key>
+    <string>com.anti-revoke.profile</string>
+    <key>PayloadRemovalDisallowed</key>
+    <false/>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>12345678-abcd-ef01-2345-6789abcdef01</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
 </dict>
 </plist>`;
 
-    const manifestFileName = `manifest-${Date.now()}.plist`;
-    const manifestPath = path.join(UPLOAD_DIR, manifestFileName);
-    fs.writeFileSync(manifestPath, manifestXml);
-
-    const manifestUrl = `${baseUrl}/uploads/${manifestFileName}`;
-    const installUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(manifestUrl)}`;
-
-    await fs.remove(extractDir);
-
-    res.json({
-      success: true,
-      appName,
-      bundleId,
-      version,
-      installUrl,
-      provisionUrl
-    });
-
-  } catch (err) {
-    console.error(err);
-    if (fs.existsSync(extractDir)) await fs.remove(extractDir);
-    res.status(500).json({ error: 'IPA解析エラー: ' + err.message });
-  }
-});
-
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  res.setHeader('Content-Type', 'application/x-apple-aspen-config');
+  res.setHeader('Content-Disposition', 'attachment; filename="AntiRevoke.mobileconfig"');
+  res.send(configXml);
 });
