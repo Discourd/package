@@ -33,12 +33,27 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px 15px;
+      padding: 20px 15px 90px 15px; /* 下部ナビゲーションの被り防止 */
     }
 
     .container {
       width: 100%;
       max-width: 600px;
+    }
+
+    /* 画面切り替え管理 */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     /* ヘッダー＆ステータスバー */
@@ -194,12 +209,6 @@
       padding: 20px;
       margin-bottom: 20px;
       border: 1px solid var(--border-color);
-      animation: fadeIn 0.4s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
     }
 
     .app-title {
@@ -320,8 +329,117 @@
       text-align: center;
     }
 
+    /* 説明タブのデザイン */
+    .how-to-card {
+      background-color: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 15px;
+    }
+
+    .how-to-header {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .step-box {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 18px;
+    }
+
+    .step-box:last-child {
+      margin-bottom: 0;
+    }
+
+    .step-num {
+      background-color: var(--accent-color);
+      color: #fff;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    .step-content {
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .step-title {
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 3px;
+    }
+
+    .step-text {
+      color: var(--text-sub);
+    }
+
+    .badge-tag {
+      background-color: rgba(139, 92, 246, 0.2);
+      color: #c084fc;
+      border: 1px solid var(--purple-color);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    /* 下部ナビゲーションバー */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+      z-index: 1000;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-sub);
+      text-decoration: none;
+      font-size: 0.75rem;
+      width: 50%;
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+
+    .nav-item i {
+      font-size: 1.3rem;
+    }
+
+    .nav-item.active {
+      color: var(--accent-color);
+      font-weight: 600;
+    }
+
     footer {
-      margin-top: 30px;
+      margin-top: 20px;
       text-align: center;
       font-size: 0.75rem;
       color: var(--text-sub);
@@ -351,80 +469,175 @@
     <!-- エラー表示エリア -->
     <div id="error-msg" class="error-msg"></div>
 
-    <!-- ぷりプロファイルダウンロード -->
-    <div class="profile-card">
-      <div class="profile-title">
-        <i class="fa-solid fa-shield-halved" style="color: var(--purple-color);"></i>
-        「整合性を確認できなかった」回避
-      </div>
-      <div class="profile-desc">
-        インストール時に整合性エラーが出る場合、以下の回避プロファイルをインストール（許可＆設定で適用）してからお試しください。
-      </div>
-      <a href="/download-dns" class="btn btn-purple">
-        <i class="fa-solid fa-download"></i> ぷりプロファイルを保存
-      </a>
-    </div>
-
-    <!-- アップロードカード -->
-    <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-input').click()">
-      <i class="fa-solid fa-box-archive upload-icon"></i>
-      <div class="upload-title">IPA ファイルを選択</div>
-      <div class="upload-desc">またはここにドラッグ＆ドロップ</div>
-      <input type="file" id="file-input" accept=".ipa">
-    </div>
-
-    <!-- アップロード進行状況 -->
-    <div class="progress-container" id="progress-container">
-      <div class="progress-text">
-        <span id="progress-status">処理中...</span>
-        <span id="progress-percent">0%</span>
-      </div>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="progress-bar"></div>
-      </div>
-    </div>
-
-    <!-- 解析結果 ＆ インストールカード -->
-    <div class="result-card" id="result-card">
-      <div class="app-title" id="res-app-name">App Name</div>
-
-      <div class="info-group">
-        <div class="info-row">
-          <span class="info-label">Bundle ID</span>
-          <span class="info-value" id="res-bundle-id">com.example.app</span>
+    <!-- ==================== タブ1: ホーム（メイン機能） ==================== -->
+    <div id="tab-home" class="tab-content active">
+      <!-- ぷりプロファイルダウンロード -->
+      <div class="profile-card">
+        <div class="profile-title">
+          <i class="fa-solid fa-shield-halved" style="color: var(--purple-color);"></i>
+          「整合性を確認できなかった」回避
         </div>
-        <div class="info-row">
-          <span class="info-label">Version</span>
-          <span class="info-value" id="res-version">1.0</span>
+        <div class="profile-desc">
+          インストール時に整合性エラーが出る場合、以下の回避プロファイルをインストール（許可＆設定で適用）してからお試しください。
+        </div>
+        <a href="/download-dns" class="btn btn-purple">
+          <i class="fa-solid fa-download"></i> ぷりプロファイルを保存
+        </a>
+      </div>
+
+      <!-- アップロードカード -->
+      <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <i class="fa-solid fa-box-archive upload-icon"></i>
+        <div class="upload-title">IPA ファイルを選択</div>
+        <div class="upload-desc">またはここにドラッグ＆ドロップ</div>
+        <input type="file" id="file-input" accept=".ipa">
+      </div>
+
+      <!-- アップロード進行状況 -->
+      <div class="progress-container" id="progress-container">
+        <div class="progress-text">
+          <span id="progress-status">処理中...</span>
+          <span id="progress-percent">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-bar"></div>
         </div>
       </div>
 
-      <!-- OTAインストールボタン -->
-      <a href="#" id="btn-install" class="btn btn-install">
-        <i class="fa-solid fa-download"></i> iOS端末でインストール
-      </a>
+      <!-- 解析結果 ＆ インストールカード -->
+      <div class="result-card" id="result-card">
+        <div class="app-title" id="res-app-name">App Name</div>
 
-      <!-- 署名プロファイルダウンロードボタン（抽出できた場合のみ表示） -->
-      <a href="#" id="btn-provision" class="btn btn-secondary" style="display: none;" download>
-        <i class="fa-solid fa-file-signature"></i> 署名書(.mobileprovision)を保存
-      </a>
+        <div class="info-group">
+          <div class="info-row">
+            <span class="info-label">Bundle ID</span>
+            <span class="info-value" id="res-bundle-id">com.example.app</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Version</span>
+            <span class="info-value" id="res-version">1.0</span>
+          </div>
+        </div>
+
+        <!-- OTAインストールボタン -->
+        <a href="#" id="btn-install" class="btn btn-install">
+          <i class="fa-solid fa-download"></i> iOS端末でインストール
+        </a>
+
+        <!-- 署名プロファイルダウンロードボタン（抽出できた場合のみ表示） -->
+        <a href="#" id="btn-provision" class="btn btn-secondary" style="display: none;" download>
+          <i class="fa-solid fa-file-signature"></i> 署名書(.mobileprovision)を保存
+        </a>
+      </div>
+
+      <!-- 失効ガイド・注意書き -->
+      <div class="guide-card">
+        <div class="guide-title">
+          <i class="fa-solid fa-triangle-exclamation"></i> それでもエラーが出る場合
+        </div>
+        <ol class="guide-list">
+          <li>iPhoneの「設定」>「プロファイルがダウンロードされました」から「ぷりプロファイル」をインストールしてください。</li>
+          <li>プロファイル適用後、一度 **iPhoneを再起動** してから再度インストールを試してください。</li>
+          <li>端末のキャッシュが強力な場合は、PC（Sideloadly / AltStore）を使った直接インストールをお勧めします。</li>
+        </ol>
+      </div>
     </div>
 
-    <!-- 失効ガイド・注意書き -->
-    <div class="guide-card">
-      <div class="guide-title">
-        <i class="fa-solid fa-triangle-exclamation"></i> それでもエラーが出る場合
+    <!-- ==================== タブ2: 説明ガイド ==================== -->
+    <div id="tab-guide" class="tab-content">
+      <div class="how-to-card">
+        <div class="how-to-header">
+          <i class="fa-solid fa-rocket" style="color: var(--accent-color);"></i>
+          基本の使い方（アプリインストール）
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">IPAファイルを準備</div>
+            <div class="step-text">お手持ちのiPhoneまたはPCに、アプリの `.ipa` ファイルを用意します。</div>
+          </div>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">ファイルをアップロード</div>
+            <div class="step-text">ホーム画面の枠内をタップ（またはドラッグ＆ドロップ）してIPAファイルを選択します。自動で解析が始まります。</div>
+          </div>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">「iOS端末でインストール」をタップ</div>
+            <div class="step-text">解析が終わると緑色のボタンが出ます。タップすると「インストールしますか？」とダイアログが出るので許可してください。</div>
+          </div>
+        </div>
       </div>
-      <ol class="guide-list">
-        <li>iPhoneの「設定」>「プロファイルがダウンロードされました」から「ぷりプロファイル」をインストールしてください。</li>
-        <li>プロファイル適用後、一度 **iPhoneを再起動** してから再度インストールを試してください。</li>
-        <li>端末のキャッシュが強力な場合は、PC（Sideloadly / AltStore）を使った直接インストールをお勧めします。</li>
-      </ol>
+
+      <div class="how-to-card">
+        <div class="how-to-header">
+          <i class="fa-solid fa-shield-cat" style="color: var(--purple-color);"></i>
+          エラー「整合性を確認できなかった」が出た時
+        </div>
+        
+        <div style="margin-bottom: 12px;">
+          <span class="badge-tag">おすすめ回避手順</span>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">「ぷりプロファイル」をダウンロード</div>
+            <div class="step-text">ホーム画面上の紫色の「ぷりプロファイルを保存」ボタンをタップしてプロファイルを保存します。</div>
+          </div>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">iPhoneの設定アプリで承認</div>
+            <div class="step-text">iPhoneの「設定」を開き、一番上の「プロファイルがダウンロードされました」からインストールを完了させます。</div>
+          </div>
+        </div>
+
+        <div class="step-box">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">iPhoneを再起動して再試行</div>
+            <div class="step-text">一度iPhoneの電源を完全に切って再起動したあと、もう一度アプリのインストールを行ってください。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="how-to-card">
+        <div class="how-to-header">
+          <i class="fa-solid fa-file-signature" style="color: var(--warning-color);"></i>
+          署名書(.mobileprovision)の抽出
+        </div>
+        <div class="step-content" style="color: var(--text-sub); font-size: 0.85rem; line-height: 1.6;">
+          IPAファイルをアップロードすると、サーバー側で自動的に中身を展開し、アプリに含まれている `embedded.mobileprovision` ファイルを抽出します。<br><br>
+          解析完了後に表示されるグレーの「署名書を保存」ボタンから、証明書ファイル単体をダウンロードできます。
+        </div>
+      </div>
     </div>
 
     <footer>
       &copy; 2026 ぷりのipaファイルアプリ化サイト
     </footer>
+  </div>
+
+  <!-- 下部固定ナビゲーションバー -->
+  <div class="bottom-nav">
+    <div class="nav-item active" id="nav-home" onclick="switchTab('home')">
+      <i class="fa-solid fa-house"></i>
+      <span>ホーム</span>
+    </div>
+    <div class="nav-item" id="nav-guide" onclick="switchTab('guide')">
+      <i class="fa-solid fa-circle-question"></i>
+      <span>使い方説明</span>
+    </div>
   </div>
 
   <!-- Socket.IOライブラリ読み込み -->
@@ -440,6 +653,21 @@
     socket.on('visitCount', (visits) => {
       document.getElementById('total-visits').innerText = visits.toLocaleString();
     });
+
+    // タブ切り替え処理
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+      if (tabName === 'home') {
+        document.getElementById('tab-home').classList.add('active');
+        document.getElementById('nav-home').classList.add('active');
+      } else if (tabName === 'guide') {
+        document.getElementById('tab-guide').classList.add('active');
+        document.getElementById('nav-guide').classList.add('active');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     // DOM要素の設定
     const dropZone = document.getElementById('drop-zone');
