@@ -8,7 +8,6 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// public ディレクトリ（静的ファイル提供）
 app.use(express.static('public'));
 
 const uploadDir = path.join(__dirname, 'public/uploads');
@@ -16,13 +15,15 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// Multerの設定（一時保存先）
 const upload = multer({ dest: '/tmp/' });
 
 app.post('/upload', upload.single('ipa'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).send('IPAファイルがありません');
+    if (!req.file) {
+      return res.status(400).send('IPAファイルが指定されていません。');
+    }
 
-    // Renderが提供するHTTPS URLを動的に取得
     const host = req.get('host');
     const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
     const baseUrl = `${protocol}://${host}`;
@@ -30,25 +31,70 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
     const tempFilePath = req.file.path;
     const fileId = Date.now().toString();
     const targetFolder = path.join(uploadDir, fileId);
-    fs.mkdirSync(targetFolder);
+    fs.mkdirSync(targetFolder, { recursive: true });
 
     const savedIpaPath = path.join(targetFolder, 'app.ipa');
+    
+    // 一時ファイルを移動
     fs.renameSync(tempFilePath, savedIpaPath);
 
-    // ZIP解凍してInfo.plist取得
-    const zip = new AdmZip(savedIpaPath);
-    const infoPlistEntry = zip.getEntries().find(entry => 
+    // ZIPとしてIPAをオープン
+    let zip;
+    try {
+      zip = new AdmZip(savedIpaPath);
+    } catch (zipErr) {
+      console.error('ZIP解凍エラー:', zipErr);
+      return res.status(400).send('不正なIPA（ZIP）ファイルです。');
+    }
+
+    // Info.plist を検索
+    const zipEntries = zip.getEntries();
+    const infoPlistEntry = zipEntries.find(entry => 
       /^Payload\/[^\/]+\.app\/Info\.plist$/i.test(entry.entryName)
     );
 
-    if (!infoPlistEntry) return res.status(400).send('Info.plistが見つかりません');
+    if (!infoPlistEntry) {
+      console.error('Info.plistが見つかりません。エントリー一覧:', zipEntries.map(e => e.entryName));
+      return res.status(400).send('IPA内に Info.plist が見つかりませんでした。');
+    }
 
-    const [plistData] = bplist.parseBuffer(infoPlistEntry.getData());
+    // Info.plistの読み込みとパース (バイナリ or XML 対応)
+    const plistBuffer = infoPlistEntry.getData();
+    let plistData;
+
+    try {
+      // バイナリplistの解析を試行
+      const parsed = bplist.parseBuffer(plistBuffer);
+      plistData = parsed[0];
+    } catch (e) {
+      // バイナリ解析失敗時は文字列（XML plist）として簡易フォールバック処理
+      console.log('bplistパース失敗。XML形式としてフォールバック解析を試みます。');
+      const plistString = plistBuffer.toString('utf8');
+      
+      const getXmlValue = (key) => {
+        const regex = new RegExp(`<key>${key}</key>\\s*<string>(.*?)</string>`, 'i');
+        const match = plistString.match(regex);
+        return match ? match[1] : null;
+      };
+
+      plistData = {
+        CFBundleIdentifier: getXmlValue('CFBundleIdentifier'),
+        CFBundleShortVersionString: getXmlValue('CFBundleShortVersionString'),
+        CFBundleVersion: getXmlValue('CFBundleVersion'),
+        CFBundleDisplayName: getXmlValue('CFBundleDisplayName'),
+        CFBundleName: getXmlValue('CFBundleName')
+      };
+    }
+
+    if (!plistData || !plistData.CFBundleIdentifier) {
+      return res.status(400).send('Info.plistから Bundle ID を取得できませんでした。');
+    }
+
     const bundleId = plistData.CFBundleIdentifier;
     const bundleVersion = plistData.CFBundleShortVersionString || plistData.CFBundleVersion || '1.0.0';
     const appName = plistData.CFBundleDisplayName || plistData.CFBundleName || 'App';
 
-    // manifest.plist 作成
+    // manifest.plist の生成
     const ipaUrl = `${baseUrl}/uploads/${fileId}/app.ipa`;
     const manifestContent = generateManifestXml(ipaUrl, bundleId, bundleVersion, appName);
     
@@ -66,8 +112,8 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).send('エラーが発生しました');
+    console.error('サーバー処理全体エラー:', error);
+    res.status(500).send(`サーバー処理エラー: ${error.message || error}`);
   }
 });
 
@@ -105,4 +151,6 @@ function generateManifestXml(ipaUrl, bundleId, version, appName) {
 </plist>`;
 }
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
