@@ -5,49 +5,391 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IPA Distribution Tool</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: 0 auto; }
-    .box { border: 2px dashed #ccc; padding: 20px; text-align: center; margin-bottom: 20px; }
-    .btn { display: inline-block; padding: 12px 24px; background: #007aff; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold; }
-    #result { display: none; background: #f0f0f5; padding: 15px; border-radius: 8px; }
+    :root {
+      --bg: #f2f2f7;
+      --card-bg: #ffffff;
+      --text: #1c1c1e;
+      --sub-text: #8e8e93;
+      --primary: #007aff;
+      --primary-hover: #0056b3;
+      --border: #e5e5ea;
+      --success: #34c759;
+      --danger: #ff3b30;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      text-align: center;
+    }
+
+    p.subtitle {
+      color: var(--sub-text);
+      font-size: 14px;
+      text-align: center;
+      margin: 0 0 24px 0;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 32px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background-color: #fafafa;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--primary);
+      background-color: rgba(0, 122, 255, 0.04);
+    }
+
+    .drop-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .drop-text {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .drop-hint {
+      font-size: 12px;
+      color: var(--sub-text);
+      margin-top: 4px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-info {
+      display: none;
+      margin-top: 16px;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      word-break: break-all;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background 0.2s ease, transform 0.1s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn:disabled {
+      background: #c7c7cc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* プログレスバー */
+    .progress-container {
+      display: none;
+      margin-top: 24px;
+    }
+
+    .progress-bar-bg {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--primary);
+      transition: width 0.3s ease;
+    }
+
+    .status-text {
+      font-size: 13px;
+      color: var(--sub-text);
+      margin-top: 8px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    /* 結果エリア */
+    .result-container {
+      display: none;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .app-title {
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .info-group {
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      padding: 4px 0;
+    }
+
+    .info-label { color: var(--sub-text); }
+    .info-value { font-weight: 600; }
+
+    .install-btn {
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      background: var(--success);
+      color: white;
+      padding: 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3);
+    }
+
+    .error-msg {
+      display: none;
+      color: var(--danger);
+      background: rgba(255, 59, 48, 0.1);
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      margin-top: 16px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
 
-  <h2>IPA OTA配信ツール</h2>
+<div class="container">
+  <div class="card">
+    <h1>IPA OTA 配信ツール</h1>
+    <p class="subtitle">iOSアプリのインストールリンクを発行</p>
 
-  <div class="box">
-    <input type="file" id="ipaFile" accept=".ipa"><br><br>
-    <button onclick="uploadIpa()">アップロード & 解析</button>
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('ipaFile').click()">
+      <span class="drop-icon">📦</span>
+      <div class="drop-text">IPA ファイルを選択</div>
+      <div class="drop-hint">またはここにドラッグ＆ドロップ</div>
+      <input type="file" id="ipaFile" accept=".ipa" onchange="handleFileSelect(event)">
+    </div>
+
+    <div class="file-info" id="fileInfo"></div>
+
+    <button class="btn" id="uploadBtn" onclick="uploadIpa()" disabled>アップロード & 解析</button>
+
+    <!-- プログレス表示 -->
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressBar"></div>
+      </div>
+      <div class="status-text" id="statusText">準備中...</div>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <!-- 解析結果エリア -->
+    <div class="result-container" id="resultContainer">
+      <div class="app-title" id="resAppName">App Name</div>
+      
+      <div class="info-group">
+        <div class="info-row">
+          <span class="info-label">Bundle ID</span>
+          <span class="info-value" id="resBundleId">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Version</span>
+          <span class="info-value" id="resVersion">-</span>
+        </div>
+      </div>
+
+      <a id="installLink" href="#" class="install-btn">iOS端末でインストール</a>
+    </div>
   </div>
+</div>
 
-  <div id="result">
-    <h3 id="appName"></h3>
-    <p>Bundle ID: <span id="bundleId"></span></p>
-    <p>Version: <span id="version"></span></p>
-    <a id="installBtn" href="" class="btn">iOS端末でインストール</a>
-  </div>
+<script>
+  let selectedFile = null;
 
-  <script>
-    async function uploadIpa() {
-      const fileInput = document.getElementById('ipaFile');
-      if (!fileInput.files[0]) return alert('ファイルを選択してください');
-
-      const formData = new FormData();
-      formData.append('ipa', fileInput.files[0]);
-
-      const res = await fetch('/upload', { method: 'POST', body: formData });
-      const data = await res.json();
-
-      if (data.success) {
-        document.getElementById('appName').innerText = data.appName;
-        document.getElementById('bundleId').innerText = data.bundleId;
-        document.getElementById('version').innerText = data.version;
-        document.getElementById('installBtn').href = data.installUrl;
-        document.getElementById('result').style.display = 'block';
-      } else {
-        alert('エラーが発生しました');
-      }
+  function handleFileSelect(e) {
+    const files = e.target.files || e.dataTransfer.files;
+    if (files.length > 0) {
+      selectedFile = files[0];
+      showFileInfo(selectedFile.name);
     }
-  </script>
+  }
+
+  function showFileInfo(name) {
+    const fileInfo = document.getElementById('fileInfo');
+    fileInfo.innerText = `選択中: ${name}`;
+    fileInfo.style.display = 'block';
+    document.getElementById('uploadBtn').disabled = false;
+    hideError();
+    document.getElementById('resultContainer').style.display = 'none';
+  }
+
+  // ドラッグ＆ドロップ処理
+  const dropZone = document.getElementById('dropZone');
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    }, false);
+  });
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+    }, false);
+  });
+  dropZone.addEventListener('drop', handleFileSelect, false);
+
+  function showError(msg) {
+    const err = document.getElementById('errorMsg');
+    err.innerText = msg;
+    err.style.display = 'block';
+  }
+
+  function hideError() {
+    document.getElementById('errorMsg').style.display = 'none';
+  }
+
+  // アップロード処理
+  function uploadIpa() {
+    if (!selectedFile) return;
+
+    const btn = document.getElementById('uploadBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const statusText = document.getElementById('statusText');
+    const resultContainer = document.getElementById('resultContainer');
+
+    btn.disabled = true;
+    progressContainer.style.display = 'block';
+    resultContainer.style.display = 'none';
+    hideError();
+
+    const formData = new FormData();
+    formData.append('ipa', selectedFile);
+
+    const xhr = new XMLHttpRequest();
+
+    // 安全なエンドポイントURLの組み立て
+    let uploadUrl = '/upload';
+    if (window.location.protocol.startsWith('http')) {
+      uploadUrl = `${window.location.origin}/upload`;
+    }
+
+    try {
+      xhr.open('POST', uploadUrl, true);
+    } catch (e) {
+      showError('リクエストの作成に失敗しました: ' + e.message);
+      btn.disabled = false;
+      return;
+    }
+
+    // 進捗（プログレス）イベントの検知
+    xhr.upload.onprogress = function(e) {
+      if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        progressBar.style.width = percent + '%';
+        if (percent < 100) {
+          statusText.innerText = `アップロード中... ${percent}%`;
+        } else {
+          statusText.innerText = 'IPAを解凍 & Info.plist 解析中...';
+        }
+      }
+    };
+
+    xhr.onload = function() {
+      btn.disabled = false;
+      if (xhr.status === 200) {
+        try {
+          const res = JSON.parse(xhr.responseText);
+          if (res.success) {
+            statusText.innerText = '処理完了！';
+            document.getElementById('resAppName').innerText = res.appName;
+            document.getElementById('resBundleId').innerText = res.bundleId;
+            document.getElementById('resVersion').innerText = res.version;
+            document.getElementById('installLink').href = res.installUrl;
+            resultContainer.style.display = 'block';
+          } else {
+            showError('解析エラーが発生しました。');
+          }
+        } catch(err) {
+          showError('サーバーからのレスポンス解析に失敗しました。');
+        }
+      } else {
+        showError(`エラー (${xhr.status}): ${xhr.responseText || 'アップロードに失敗しました。'}`);
+      }
+    };
+
+    xhr.onerror = function() {
+      btn.disabled = false;
+      showError('通信エラーが発生しました。ネットワークまたはサーバー状態を確認してください。');
+    };
+
+    xhr.send(formData);
+  }
+</script>
 </body>
 </html>
