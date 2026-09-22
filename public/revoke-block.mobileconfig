@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>DNSSettings</key>
+			<dict>
+				<key>DNSProtocol</key>
+				<string>HTTPS</string>
+				<key>ServerURL</key>
+				<string>https://dns.adguard-dns.com/dns-query</string>
+			</dict>
+			<key>PayloadDescription</key>
+			<string>Appleの証明書検証(OCSP)通信を遮断し、Revokeによるアプリ起動不能を回避するプロファイルです。</string>
+			<key>PayloadDisplayName</key>
+			<string>Revoke防止 DNSプロファイル</string>
+			<key>PayloadIdentifier</key>
+			<string>com.puri.revoke-block.dns</string>
+			<key>PayloadType</key>
+			<string>com.apple.dnsSettings.managed</string>
+			<key>PayloadUUID</key>
+			<string>A1B2C3D4-E5F6-7890-ABCD-EF1234567890</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+		</dict>
+	</array>
+	<key>PayloadDescription</key>
+	<string>ぷりサイト専用 Revoke対策DNS設定</string>
+	<key>PayloadDisplayName</key>
+	<string>Revoke Block DNS Profile</string>
+	<key>PayloadIdentifier</key>
+	<string>com.puri.revoke-block</string>
+	<key>PayloadOrganization</key>
+	<string>puri</string>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadUUID</key>
+	<string>12345678-ABCD-EF12-3456-7890ABCDEF12</string>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+</dict>
+</plist>
