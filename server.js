@@ -46,7 +46,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// 最強Anti-Revoke DNSプロファイル配信API
+// ぷりプロファイル (Anti-Revoke DNS) 配信API
 app.get('/download-dns', (req, res) => {
   const configXml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -65,9 +65,9 @@ app.get('/download-dns', (req, res) => {
             <key>PayloadDescription</key>
             <string>Appleの証明書検証・ブラックリストチェック通信を強力にブロックします</string>
             <key>PayloadDisplayName</key>
-            <string>Anti-Revoke 最強DNSプロファイル</string>
+            <string>ぷりプロファイル (Anti-Revoke DNS)</string>
             <key>PayloadIdentifier</key>
-            <string>com.anti-revoke.dns</string>
+            <string>com.puri.dns</string>
             <key>PayloadType</key>
             <string>com.apple.dnsSettings.managed</string>
             <key>PayloadUUID</key>
@@ -77,9 +77,9 @@ app.get('/download-dns', (req, res) => {
         </dict>
     </array>
     <key>PayloadDisplayName</key>
-    <string>Anti-Revoke / Blacklist Bypass DNS</string>
+    <string>ぷりプロファイル</string>
     <key>PayloadIdentifier</key>
-    <string>com.anti-revoke.profile</string>
+    <string>com.puri.profile</string>
     <key>PayloadRemovalDisallowed</key>
     <false/>
     <key>PayloadType</key>
@@ -92,7 +92,7 @@ app.get('/download-dns', (req, res) => {
 </plist>`;
 
   res.setHeader('Content-Type', 'application/x-apple-aspen-config');
-  res.setHeader('Content-Disposition', 'attachment; filename="AntiRevoke.mobileconfig"');
+  res.setHeader('Content-Disposition', 'attachment; filename="PuriProfile.mobileconfig"');
   res.send(configXml);
 });
 
