@@ -3,8 +3,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const AdmZip = require('adm-zip');
+const fs = require('fs-extra');
+const unzipper = require('unzipper');
+const bplist = require('bplist-parser');
 const plist = require('plist');
 
 const app = express();
@@ -12,188 +13,158 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST_URL || `http://localhost:${PORT}`;
 
-// アップロード先フォルダの作成
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// ディレクトリの準備
+const UPLOAD_DIR = path.join(__dirname, 'uploads');
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const DOWNLOAD_DIR = path.join(PUBLIC_DIR, 'downloads');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-});
-const upload = multer({ storage: storage });
+fs.ensureDirSync(UPLOAD_DIR);
+fs.ensureDirSync(PUBLIC_DIR);
+fs.ensureDirSync(DOWNLOAD_DIR);
 
-// 静的ファイルの配信
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(uploadDir));
+app.use(express.static(PUBLIC_DIR));
 
-// アクセス数の管理
-let onlineUsers = 0;
+// Multer設定
+const upload = multer({ dest: UPLOAD_DIR });
+
+// 訪問者数とオンライン人数
+let activeUsers = 0;
 let totalVisits = 0;
 
 io.on('connection', (socket) => {
-  onlineUsers++;
+  activeUsers++;
   totalVisits++;
-
-  io.emit('userCount', onlineUsers);
+  io.emit('userCount', activeUsers);
   io.emit('visitCount', totalVisits);
 
   socket.on('disconnect', () => {
-    onlineUsers = Math.max(0, onlineUsers - 1);
-    io.emit('userCount', onlineUsers);
+    activeUsers = Math.max(0, activeUsers - 1);
+    io.emit('userCount', activeUsers);
   });
 });
 
-// ぷりプロファイル (Anti-Revoke DNS) 配信API
+// DNSプロファイルダウンロード
 app.get('/download-dns', (req, res) => {
-  const configXml = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>PayloadContent</key>
-    <array>
-        <dict>
-            <key>DNSSettings</key>
-            <dict>
-                <key>DNSProtocol</key>
-                <string>HTTPS</string>
-                <key>ServerURL</key>
-                <string>https://dns.nextdns.io</string>
-            </dict>
-            <key>PayloadDescription</key>
-            <string>Appleの証明書検証・ブラックリストチェック通信を強力にブロックします</string>
-            <key>PayloadDisplayName</key>
-            <string>ぷりプロファイル (Anti-Revoke DNS)</string>
-            <key>PayloadIdentifier</key>
-            <string>com.puri.dns</string>
-            <key>PayloadType</key>
-            <string>com.apple.dnsSettings.managed</string>
-            <key>PayloadUUID</key>
-            <string>a8b2c3d4-e5f6-7890-abcd-ef1234567890</string>
-            <key>PayloadVersion</key>
-            <integer>1</integer>
-        </dict>
-    </array>
-    <key>PayloadDisplayName</key>
-    <string>ぷりプロファイル</string>
-    <key>PayloadIdentifier</key>
-    <string>com.puri.profile</string>
-    <key>PayloadRemovalDisallowed</key>
-    <false/>
-    <key>PayloadType</key>
-    <string>Configuration</string>
-    <key>PayloadUUID</key>
-    <string>12345678-abcd-ef01-2345-6789abcdef01</string>
-    <key>PayloadVersion</key>
-    <integer>1</integer>
-</dict>
-</plist>`;
-
-  res.setHeader('Content-Type', 'application/x-apple-aspen-config');
-  res.setHeader('Content-Disposition', 'attachment; filename="PuriProfile.mobileconfig"');
-  res.send(configXml);
+  const filePath = path.join(__dirname, 'puri.mobileconfig');
+  if (fs.existsSync(filePath)) {
+    res.setHeader('Content-Type', 'application/x-apple-asn1-signed-data');
+    res.download(filePath, 'puri.mobileconfig');
+  } else {
+    res.status(404).send('プロファイルファイルが見つかりません');
+  }
 });
 
-// IPA解析 ＆ アップロードAPI
-app.post('/upload', upload.single('ipa'), (req, res) => {
+// IPAアップロード＆解析処理
+app.post('/upload', upload.single('ipa'), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ success: false, error: 'ファイルが選択されていません。' });
+    return res.status(400).json({ success: false, error: 'ファイルがアップロードされていません' });
   }
 
-  const filePath = req.file.path;
-  const fileName = req.file.filename;
-  const fileBaseName = path.basename(fileName, path.extname(fileName));
+  const ipaPath = req.file.path;
+  const extractDir = path.join(UPLOAD_DIR, req.file.filename + '_extracted');
 
   try {
-    const zip = new AdmZip(filePath);
-    const zipEntries = zip.getEntries();
+    // IPA解凍
+    await fs.createReadStream(ipaPath)
+      .pipe(unzipper.Extract({ path: extractDir }))
+      .promise();
 
-    let infoPlistEntry = null;
-    let provisionEntry = null;
-
-    zipEntries.forEach((entry) => {
-      if (entry.entryName.match(/^Payload\/[^\/]+\.app\/Info\.plist$/i)) {
-        infoPlistEntry = entry;
-      }
-      if (entry.entryName.match(/^Payload\/[^\/]+\.app\/embedded\.mobileprovision$/i)) {
-        provisionEntry = entry;
-      }
-    });
-
-    if (!infoPlistEntry) {
-      fs.unlinkSync(filePath);
-      return res.status(400).json({ success: false, error: '無効なIPAファイルです (Info.plistが見つかりません)。' });
+    const payloadDir = path.join(extractDir, 'Payload');
+    if (!fs.existsSync(payloadDir)) {
+      throw new Error('IPA構造が無効です（Payloadフォルダが見つかりません）');
     }
 
-    const plistBuffer = zip.readAsText(infoPlistEntry);
+    const files = await fs.readdir(payloadDir);
+    const appFolder = files.find(f => f.endsWith('.app'));
+    if (!appFolder) {
+      throw new Error('.app フォルダが見つかりません');
+    }
+
+    const appPath = path.join(payloadDir, appFolder);
+    const infoPlistPath = path.join(appPath, 'Info.plist');
+
+    // Info.plist の解析
     let appName = 'Unknown App';
-    let bundleId = 'unknown.bundle.id';
+    let bundleId = 'com.example.app';
     let version = '1.0';
 
-    try {
-      const parsedPlist = plist.parse(plistBuffer);
-      appName = parsedPlist.CFBundleDisplayName || parsedPlist.CFBundleName || appName;
-      bundleId = parsedPlist.CFBundleIdentifier || bundleId;
-      version = parsedPlist.CFBundleShortVersionString || parsedPlist.CFBundleVersion || version;
-    } catch (e) {
-      console.log('Plist Parse Warning:', e.message);
+    if (fs.existsSync(infoPlistPath)) {
+      try {
+        const plistData = await bplist.parseFile(infoPlistPath);
+        const info = plistData[0] || {};
+        appName = info.CFBundleDisplayName || info.CFBundleName || appName;
+        bundleId = info.CFBundleIdentifier || bundleId;
+        version = info.CFBundleShortVersionString || info.CFBundleVersion || version;
+      } catch (e) {
+        // テキスト型plistの場合のフォールバック
+        const content = await fs.readFile(infoPlistPath, 'utf8');
+        const info = plist.parse(content);
+        appName = info.CFBundleDisplayName || info.CFBundleName || appName;
+        bundleId = info.CFBundleIdentifier || bundleId;
+        version = info.CFBundleShortVersionString || info.CFBundleVersion || version;
+      }
     }
 
-    // 署名書プロファイル(.mobileprovision)の抽出保存
+    // ファイル移動と公開フォルダ作成
+    const appFileId = req.file.filename;
+    const targetIpaPath = path.join(DOWNLOAD_DIR, `${appFileId}.ipa`);
+    await fs.move(ipaPath, targetIpaPath, { overwrite: true });
+
+    // embedded.mobileprovision の抽出
+    const provisionPath = path.join(appPath, 'embedded.mobileprovision');
     let provisionUrl = null;
-    if (provisionEntry) {
-      const provisionPath = path.join(uploadDir, `${fileBaseName}.mobileprovision`);
-      fs.writeFileSync(provisionPath, provisionEntry.getData());
-      provisionUrl = `/uploads/${fileBaseName}.mobileprovision`;
+
+    if (fs.existsSync(provisionPath)) {
+      const targetProvisionPath = path.join(DOWNLOAD_DIR, `${appFileId}.mobileprovision`);
+      await fs.copy(provisionPath, targetProvisionPath);
+      provisionUrl = `${HOST}/downloads/${appFileId}.mobileprovision`;
     }
 
-    // 接続ホスト情報の取得
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.get('host');
-    const baseUrl = `${protocol}://${host}`;
-
-    // OTAインストール用plistの動的生成
-    const manifestXml = `<?xml version="1.0" encoding="UTF-8"?>
+    // OTA用 manifest.plist の生成
+    const manifestContent = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>items</key>
-    <array>
+  <key>items</key>
+  <array>
+    <dict>
+      <key>assets</key>
+      <array>
         <dict>
-            <key>assets</key>
-            <array>
-                <dict>
-                    <key>kind</key>
-                    <string>software-package</string>
-                    <key>url</key>
-                    <string>${baseUrl}/uploads/${fileName}</string>
-                </dict>
-            </array>
-            <key>metadata</key>
-            <dict>
-                <key>bundle-identifier</key>
-                <string>${bundleId}</string>
-                <key>bundle-version</key>
-                <string>${version}</string>
-                <key>kind</key>
-                <string>software</string>
-                <key>title</key>
-                <string>${appName}</string>
-            </dict>
+          <key>kind</key>
+          <string>software-package</string>
+          <key>url</key>
+          <string>${HOST}/downloads/${appFileId}.ipa</string>
         </dict>
-    </array>
+      </array>
+      <key>metadata</key>
+      <dict>
+        <key>bundle-identifier</key>
+        <string>${bundleId}</string>
+        <key>bundle-version</key>
+        <string>${version}</string>
+        <key>kind</key>
+        <string>software</string>
+        <key>title</key>
+        <string>${appName}</string>
+      </dict>
+    </dict>
+  </array>
 </dict>
 </plist>`;
 
-    const manifestPath = path.join(uploadDir, `${fileBaseName}.plist`);
-    fs.writeFileSync(manifestPath, manifestXml);
+    const manifestPath = path.join(DOWNLOAD_DIR, `${appFileId}.plist`);
+    await fs.writeFile(manifestPath, manifestContent, 'utf8');
 
-    const manifestUrl = `${baseUrl}/uploads/${fileBaseName}.plist`;
+    // クリーンアップ
+    await fs.remove(extractDir);
+
+    const manifestUrl = `${HOST}/downloads/${appFileId}.plist`;
     const installUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(manifestUrl)}`;
 
-    return res.json({
+    res.json({
       success: true,
       appName,
       bundleId,
@@ -203,12 +174,13 @@ app.post('/upload', upload.single('ipa'), (req, res) => {
     });
 
   } catch (err) {
-    console.error('Upload Error:', err);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    return res.status(500).json({ success: false, error: 'IPAファイルの解析に失敗しました。' });
+    console.error('Processing error:', err);
+    await fs.remove(extractDir).catch(() => {});
+    await fs.remove(ipaPath).catch(() => {});
+    res.status(500).json({ success: false, error: err.message || '解析処理に失敗しました' });
   }
 });
 
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
