@@ -15,7 +15,7 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Multerの設定（一時保存先）
+// 一時ファイル保存先
 const upload = multer({ dest: '/tmp/' });
 
 app.post('/upload', upload.single('ipa'), async (req, res) => {
@@ -35,8 +35,13 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
 
     const savedIpaPath = path.join(targetFolder, 'app.ipa');
     
-    // 一時ファイルを移動
-    fs.renameSync(tempFilePath, savedIpaPath);
+    // 【修正点】異なるディスク間でも安全に移動できるようにコピー＆削除を行う
+    fs.copyFileSync(tempFilePath, savedIpaPath);
+    try {
+      fs.unlinkSync(tempFilePath);
+    } catch (e) {
+      console.warn('一時ファイルの削除に失敗:', e);
+    }
 
     // ZIPとしてIPAをオープン
     let zip;
@@ -54,7 +59,7 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
     );
 
     if (!infoPlistEntry) {
-      console.error('Info.plistが見つかりません。エントリー一覧:', zipEntries.map(e => e.entryName));
+      console.error('Info.plistが見つかりません。');
       return res.status(400).send('IPA内に Info.plist が見つかりませんでした。');
     }
 
@@ -63,12 +68,9 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
     let plistData;
 
     try {
-      // バイナリplistの解析を試行
       const parsed = bplist.parseBuffer(plistBuffer);
       plistData = parsed[0];
     } catch (e) {
-      // バイナリ解析失敗時は文字列（XML plist）として簡易フォールバック処理
-      console.log('bplistパース失敗。XML形式としてフォールバック解析を試みます。');
       const plistString = plistBuffer.toString('utf8');
       
       const getXmlValue = (key) => {
