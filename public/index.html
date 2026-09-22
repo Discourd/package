@@ -16,6 +16,7 @@
       --success: #34c759;
       --secondary: #5856d6;
       --danger: #ff3b30;
+      --warning: #ff9500;
       --gold: #d4af37;
     }
 
@@ -182,6 +183,14 @@
 
     .install-btn { background: var(--success); box-shadow: 0 4px 12px rgba(52, 199, 89, 0.25); }
     .provision-btn { background: var(--secondary); box-shadow: 0 4px 12px rgba(88, 86, 214, 0.25); }
+    .revoke-btn {
+      background: #ff9500;
+      color: #fff;
+      margin-top: 10px;
+      font-size: 13px;
+      padding: 10px;
+      box-shadow: 0 4px 12px rgba(255, 149, 0, 0.2);
+    }
 
     .error-msg {
       display: none;
@@ -194,6 +203,35 @@
       text-align: center;
       border: 1px solid rgba(255, 59, 48, 0.3);
     }
+
+    /* Revoke対策ガイドスタイル */
+    .revoke-guide {
+      margin-top: 24px;
+      background: rgba(255, 149, 0, 0.08);
+      border: 1px solid rgba(255, 149, 0, 0.3);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .revoke-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--warning);
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .revoke-list {
+      margin: 0 0 12px 0;
+      padding-left: 18px;
+      font-size: 12px;
+      color: var(--sub-text);
+      line-height: 1.6;
+    }
+
+    .revoke-list li { margin-bottom: 6px; }
   </style>
   <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -255,6 +293,18 @@
       <a id="installLink" href="#" class="action-btn install-btn">iOS端末でインストール</a>
       <a id="provisionLink" href="#" class="action-btn provision-btn" style="display: none;" download>署名書 (.mobileprovision) を取得</a>
     </div>
+
+    <!-- Revoke対策ブロック -->
+    <div class="revoke-guide">
+      <div class="revoke-title">🛡️ Revoke（アプリ起動不能）回避プロファイル</div>
+      <ol class="revoke-list">
+        <li>ボタンから構成プロファイルをダウンロード（Safari推奨）</li>
+        <li>iPhoneの「設定」>「プロファイルがダウンロードされました」から追加</li>
+        <li>「設定」>「一般」>「VPNとデバイス管理」>「DNS」で本プロファイルを選択</li>
+      </ol>
+      <a href="/revoke-block.mobileconfig" class="action-btn revoke-btn">🛡️ Revoke防止プロファイルをDL</a>
+    </div>
+
   </div>
 </div>
 
