@@ -3,18 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IPA Distribution Tool</title>
+  <title>ぷりのipaファイルアプリ化サイト</title>
+  <link rel="icon" href="/icon.jpg" type="image/jpeg">
   <style>
     :root {
-      --bg: #f2f2f7;
-      --card-bg: #ffffff;
-      --text: #1c1c1e;
-      --sub-text: #8e8e93;
+      --bg: #121214;
+      --card-bg: #1c1c1e;
+      --text: #f2f2f7;
+      --sub-text: #a1a1a6;
       --primary: #007aff;
-      --border: #e5e5ea;
+      --border: #2c2c2e;
       --success: #34c759;
       --secondary: #5856d6;
       --danger: #ff3b30;
+      --gold: #d4af37;
     }
 
     * { box-sizing: border-box; }
@@ -33,9 +35,10 @@
     .container { width: 100%; max-width: 480px; }
     .card {
       background: var(--card-bg);
-      border-radius: 20px;
-      padding: 24px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+      border-radius: 24px;
+      padding: 28px 24px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
     }
 
     /* オンライン人数表示バッジ */
@@ -43,8 +46,8 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(52, 199, 89, 0.12);
-      color: #248a3d;
+      background: rgba(52, 199, 89, 0.15);
+      color: #34c759;
       font-size: 13px;
       font-weight: 600;
       padding: 6px 14px;
@@ -52,9 +55,7 @@
       margin: 0 auto 16px auto;
     }
 
-    .online-badge-container {
-      text-align: center;
-    }
+    .online-badge-container { text-align: center; }
 
     .dot {
       width: 8px;
@@ -71,16 +72,49 @@
       100% { opacity: 1; transform: scale(1); }
     }
 
-    h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px 0; text-align: center; }
-    p.subtitle { color: var(--sub-text); font-size: 14px; text-align: center; margin: 0 0 24px 0; }
+    /* アイコンヘッダー部分 */
+    .icon-header {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .owner-icon {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--gold);
+      box-shadow: 0 0 16px rgba(212, 175, 55, 0.3);
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 8px 0 6px 0;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    p.subtitle {
+      color: var(--sub-text);
+      font-size: 13px;
+      text-align: center;
+      margin: 0 0 24px 0;
+    }
 
     .drop-zone {
       border: 2px dashed var(--border);
-      border-radius: 16px;
+      border-radius: 18px;
       padding: 32px 16px;
       text-align: center;
       cursor: pointer;
-      background-color: #fafafa;
+      background-color: rgba(255, 255, 255, 0.02);
+      transition: all 0.2s ease;
+    }
+
+    .drop-zone:hover {
+      border-color: var(--primary);
+      background-color: rgba(0, 122, 255, 0.05);
     }
 
     .drop-icon { font-size: 40px; margin-bottom: 12px; display: block; }
@@ -91,28 +125,30 @@
     .file-info {
       display: none;
       margin-top: 16px;
-      padding: 12px;
+      padding: 12px 16px;
       background: var(--bg);
       border-radius: 12px;
       font-size: 14px;
       font-weight: 500;
       word-break: break-all;
+      border: 1px solid var(--border);
     }
 
     .btn {
       width: 100%;
-      padding: 14px;
+      padding: 15px;
       border: none;
-      border-radius: 12px;
+      border-radius: 14px;
       background: var(--primary);
       color: white;
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
       margin-top: 20px;
+      transition: opacity 0.2s ease;
     }
 
-    .btn:disabled { background: #c7c7cc; cursor: not-allowed; }
+    .btn:disabled { background: #3a3a3c; color: #7c7c80; cursor: not-allowed; }
 
     .progress-container { display: none; margin-top: 24px; }
     .progress-bar-bg { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
@@ -126,11 +162,11 @@
       border-top: 1px solid var(--border);
     }
 
-    .app-title { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 12px; }
-    .info-group { background: var(--bg); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; }
-    .info-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+    .app-title { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 16px; color: #fff; }
+    .info-group { background: var(--bg); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; border: 1px solid var(--border); }
+    .info-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; }
     .info-label { color: var(--sub-text); }
-    .info-value { font-weight: 600; }
+    .info-value { font-weight: 600; color: #fff; }
 
     .action-btn {
       display: block;
@@ -144,18 +180,19 @@
       margin-bottom: 10px;
     }
 
-    .install-btn { background: var(--success); box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3); }
-    .provision-btn { background: var(--secondary); box-shadow: 0 4px 12px rgba(88, 86, 214, 0.3); }
+    .install-btn { background: var(--success); box-shadow: 0 4px 12px rgba(52, 199, 89, 0.25); }
+    .provision-btn { background: var(--secondary); box-shadow: 0 4px 12px rgba(88, 86, 214, 0.25); }
 
     .error-msg {
       display: none;
       color: var(--danger);
-      background: rgba(255, 59, 48, 0.1);
+      background: rgba(255, 59, 48, 0.15);
       padding: 12px;
       border-radius: 12px;
       font-size: 13px;
       margin-top: 16px;
       text-align: center;
+      border: 1px solid rgba(255, 59, 48, 0.3);
     }
   </style>
   <script src="/socket.io/socket.io.js"></script>
@@ -165,7 +202,7 @@
 <div class="container">
   <div class="card">
     
-    <!-- 一番上に接続人数を表示 -->
+    <!-- オンライン人数表示 -->
     <div class="online-badge-container">
       <div class="online-badge">
         <span class="dot"></span>
@@ -173,8 +210,13 @@
       </div>
     </div>
 
-    <h1>IPA OTA 配信ツール</h1>
-    <p class="subtitle">iOSアプリのインストール & 署名書発行</p>
+    <!-- アイコン画像 -->
+    <div class="icon-header">
+      <img src="/icon.jpg" alt="Icon" class="owner-icon" onerror="this.style.display='none'">
+    </div>
+
+    <h1>ぷりのipaファイルアプリ化サイト</h1>
+    <p class="subtitle">iOSアプリOTAインストール & 署名書抽出ツール</p>
 
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('ipaFile').click()">
       <span class="drop-icon">📦</span>
@@ -217,7 +259,6 @@
 </div>
 
 <script>
-  // WebSocketによる人数受信
   const socket = io();
   socket.on('userCount', (count) => {
     document.getElementById('userCount').innerText = count;
