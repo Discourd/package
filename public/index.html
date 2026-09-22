@@ -38,6 +38,39 @@
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
     }
 
+    /* オンライン人数表示バッジ */
+    .online-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(52, 199, 89, 0.12);
+      color: #248a3d;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      margin: 0 auto 16px auto;
+    }
+
+    .online-badge-container {
+      text-align: center;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--success);
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
     h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px 0; text-align: center; }
     p.subtitle { color: var(--sub-text); font-size: 14px; text-align: center; margin: 0 0 24px 0; }
 
@@ -125,11 +158,21 @@
       text-align: center;
     }
   </style>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
 <div class="container">
   <div class="card">
+    
+    <!-- 一番上に接続人数を表示 -->
+    <div class="online-badge-container">
+      <div class="online-badge">
+        <span class="dot"></span>
+        <span>オンライン: <strong id="userCount">1</strong> 人</span>
+      </div>
+    </div>
+
     <h1>IPA OTA 配信ツール</h1>
     <p class="subtitle">iOSアプリのインストール & 署名書発行</p>
 
@@ -174,6 +217,12 @@
 </div>
 
 <script>
+  // WebSocketによる人数受信
+  const socket = io();
+  socket.on('userCount', (count) => {
+    document.getElementById('userCount').innerText = count;
+  });
+
   let selectedFile = null;
 
   function handleFileSelect(e) {
