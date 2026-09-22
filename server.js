@@ -15,7 +15,6 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// 一時ファイル保存先
 const upload = multer({ dest: '/tmp/' });
 
 app.post('/upload', upload.single('ipa'), async (req, res) => {
@@ -35,7 +34,7 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
 
     const savedIpaPath = path.join(targetFolder, 'app.ipa');
     
-    // 【修正点】異なるディスク間でも安全に移動できるようにコピー＆削除を行う
+    // 一時ファイルを安全にコピー＆削除
     fs.copyFileSync(tempFilePath, savedIpaPath);
     try {
       fs.unlinkSync(tempFilePath);
@@ -52,18 +51,17 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
       return res.status(400).send('不正なIPA（ZIP）ファイルです。');
     }
 
-    // Info.plist を検索
     const zipEntries = zip.getEntries();
+
+    // 1. Info.plist を検索・パース
     const infoPlistEntry = zipEntries.find(entry => 
       /^Payload\/[^\/]+\.app\/Info\.plist$/i.test(entry.entryName)
     );
 
     if (!infoPlistEntry) {
-      console.error('Info.plistが見つかりません。');
       return res.status(400).send('IPA内に Info.plist が見つかりませんでした。');
     }
 
-    // Info.plistの読み込みとパース (バイナリ or XML 対応)
     const plistBuffer = infoPlistEntry.getData();
     let plistData;
 
@@ -72,7 +70,6 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
       plistData = parsed[0];
     } catch (e) {
       const plistString = plistBuffer.toString('utf8');
-      
       const getXmlValue = (key) => {
         const regex = new RegExp(`<key>${key}</key>\\s*<string>(.*?)</string>`, 'i');
         const match = plistString.match(regex);
@@ -96,7 +93,19 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
     const bundleVersion = plistData.CFBundleShortVersionString || plistData.CFBundleVersion || '1.0.0';
     const appName = plistData.CFBundleDisplayName || plistData.CFBundleName || 'App';
 
-    // manifest.plist の生成
+    // 2. 署名書（embedded.mobileprovision）の抽出
+    const provisionEntry = zipEntries.find(entry => 
+      /^Payload\/[^\/]+\.app\/embedded\.mobileprovision$/i.test(entry.entryName)
+    );
+
+    let provisionUrl = null;
+    if (provisionEntry) {
+      const provisionPath = path.join(targetFolder, 'embedded.mobileprovision');
+      fs.writeFileSync(provisionPath, provisionEntry.getData());
+      provisionUrl = `${baseUrl}/uploads/${fileId}/embedded.mobileprovision`;
+    }
+
+    // 3. manifest.plist の生成
     const ipaUrl = `${baseUrl}/uploads/${fileId}/app.ipa`;
     const manifestContent = generateManifestXml(ipaUrl, bundleId, bundleVersion, appName);
     
@@ -110,7 +119,8 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
       appName,
       bundleId,
       version: bundleVersion,
-      installUrl
+      installUrl,
+      provisionUrl // 署名書ダウンロードURL
     });
 
   } catch (error) {
