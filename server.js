@@ -15,14 +15,21 @@ const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
 
 fs.ensureDirSync(UPLOAD_DIR);
 
+// 静的ファイルの配信設定（iOSのMIME Type・キャッシュ対策）
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.mobileconfig')) {
       res.setHeader('Content-Type', 'application/x-apple-aspen-config');
+    } else if (filePath.endsWith('.plist')) {
+      res.setHeader('Content-Type', 'application/x-plist');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else if (filePath.endsWith('.ipa')) {
+      res.setHeader('Content-Type', 'application/octet-stream');
     }
   }
 }));
 
+// オンライン人数カウント
 let onlineUsers = 0;
 io.on('connection', (socket) => {
   onlineUsers++;
@@ -34,6 +41,7 @@ io.on('connection', (socket) => {
   });
 });
 
+// Multer設定（2GBまでの大容量ファイルを許可）
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
@@ -46,6 +54,7 @@ const upload = multer({
   limits: { fileSize: 2 * 1024 * 1024 * 1024 }
 });
 
+// IPA処理API
 app.post('/upload', upload.single('ipa'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'ファイルが選択されていません' });
@@ -56,6 +65,7 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
   const extractDir = path.join(UPLOAD_DIR, 'extracted-' + Date.now());
 
   try {
+    // 省メモリでZIP解凍
     await fs.createReadStream(ipaPath)
       .pipe(unzipper.Extract({ path: extractDir }))
       .promise();
@@ -98,38 +108,41 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
       provisionUrl = `/uploads/${provFileName}`;
     }
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Renderなどのプロキシ（HTTPS）環境を考慮して強制的に https:// に設定
+    const host = req.get('host');
+    const baseUrl = `https://${host}`;
     const ipaDownloadUrl = `${baseUrl}/uploads/${fileName}`;
 
+    // iOS OTAで必須のManifest XMLの構造を修正
     const manifestXml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>items</key>
-    <array>
-        <dict>
-            <key>assets</key>
-            <array>
-                <dict>
-                    <key>kind</key>
-                    <string>software-package</string>
-                    <key>url</key>
-                    <string>${ipaDownloadUrl}</string>
-                </dict>
-            </array>
-            <key>metadata</key>
-            <dict>
-                <key>bundle-identifier</key>
-                <string>${bundleId}</string>
-                <key>bundle-version</key>
-                <string>${version}</string>
-                <key>kind</key>
-                <string>software</string>
-                <key>title</key>
-                <string>${appName}</string>
-            </dict>
-        </dict>
-    </array>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>assets</key>
+			<array>
+				<dict>
+					<key>kind</key>
+					<string>software-package</string>
+					<key>url</key>
+					<string>${ipaDownloadUrl}</string>
+				</dict>
+			</array>
+			<key>metadata</key>
+			<dict>
+				<key>bundle-identifier</key>
+				<string>${bundleId}</string>
+				<key>bundle-version</key>
+				<string>${version}</string>
+				<key>kind</key>
+				<string>software</string>
+				<key>title</key>
+				<string>${appName}</string>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>`;
 
