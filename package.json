@@ -1,16 +1,19 @@
 {
-  "name": "ipa-ota-server",
+  "name": "package-ipa",
   "version": "1.0.0",
-  "description": "iOS IPA OTA Installer Site",
+  "description": "iOS App OTA Installer and Provisioning Extractor",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "fs-extra": "^11.1.1",
+    "adm-zip": "^0.5.10",
+    "express": "^4.19.2",
     "multer": "^1.4.5-lts.1",
-    "socket.io": "^4.7.2",
-    "unzipper": "^0.10.14"
+    "plist": "^3.1.0",
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
