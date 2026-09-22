@@ -16,6 +16,7 @@
       --border-color: #334155;
       --success-color: #22c55e;
       --warning-color: #f59e0b;
+      --purple-color: #8b5cf6;
     }
 
     * {
@@ -43,7 +44,7 @@
     /* ヘッダー＆ステータスバー */
     header {
       text-align: center;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
 
     h1 {
@@ -85,6 +86,35 @@
       border-radius: 50%;
       display: inline-block;
       box-shadow: 0 0 8px var(--success-color);
+    }
+
+    /* プロファイルカード */
+    .profile-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--purple-color);
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);
+    }
+
+    .profile-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .profile-desc {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      margin-bottom: 14px;
+      line-height: 1.4;
     }
 
     /* ドロップエリア */
@@ -234,6 +264,15 @@
       background-color: #16a34a;
     }
 
+    .btn-purple {
+      background-color: var(--purple-color);
+      color: #fff;
+    }
+
+    .btn-purple:hover {
+      background-color: #7c3aed;
+    }
+
     .btn-secondary {
       background-color: #334155;
       color: #fff;
@@ -312,6 +351,20 @@
     <!-- エラー表示エリア -->
     <div id="error-msg" class="error-msg"></div>
 
+    <!-- 最強ブラックリスト回避プロファイルダウンロード -->
+    <div class="profile-card">
+      <div class="profile-title">
+        <i class="fa-solid fa-shield-halved" style="color: var(--purple-color);"></i>
+        「整合性を確認できなかった」回避
+      </div>
+      <div class="profile-desc">
+        インストール時に整合性エラーが出る場合、以下の回避プロファイルをインストール（許可＆設定で適用）してからお試しください。
+      </div>
+      <a href="/download-dns" class="btn btn-purple">
+        <i class="fa-solid fa-download"></i> 最強Anti-Revokeプロファイルを保存
+      </a>
+    </div>
+
     <!-- アップロードカード -->
     <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-input').click()">
       <i class="fa-solid fa-box-archive upload-icon"></i>
@@ -360,12 +413,12 @@
     <!-- 失効ガイド・注意書き -->
     <div class="guide-card">
       <div class="guide-title">
-        <i class="fa-solid fa-triangle-exclamation"></i> 「証明書が無効」と表示される場合
+        <i class="fa-solid fa-triangle-exclamation"></i> それでもエラーが出る場合
       </div>
       <ol class="guide-list">
-        <li>IPA内の証明書がAppleにより失効(Revoke)しているか、端末がブラックリスト状態です。</li>
-        <li>有効な証明書で再署名されたIPAを使用するか、PCツール（Sideloadly / AltStore）での直接インストールをお試しください。</li>
-        <li>NextDNS等を活用した検証ブロック設定を行うことで解決する場合があります。</li>
+        <li>iPhoneの「設定」>「プロファイルがダウンロードされました」からDNSプロファイルをインストールしてください。</li>
+        <li>プロファイル適用後、一度 **iPhoneを再起動** してから再度インストールを試してください。</li>
+        <li>端末のキャッシュが強力な場合は、PC（Sideloadly / AltStore）を使った直接インストールをお勧めします。</li>
       </ol>
     </div>
 
