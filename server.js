@@ -12,10 +12,28 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
+const STATS_FILE = path.join(__dirname, 'stats.json');
 
 fs.ensureDirSync(UPLOAD_DIR);
 
-// 静的ファイルの配信設定（iOSのMIME Type・キャッシュ対策）
+// 訪問者数の保存・読み込み処理
+let totalVisits = 0;
+if (fs.existsSync(STATS_FILE)) {
+  try {
+    const data = fs.readJsonSync(STATS_FILE);
+    totalVisits = data.totalVisits || 0;
+  } catch (e) {
+    totalVisits = 0;
+  }
+} else {
+  fs.writeJsonSync(STATS_FILE, { totalVisits: 0 });
+}
+
+function saveStats() {
+  fs.writeJsonSync(STATS_FILE, { totalVisits });
+}
+
+// 静的ファイルの配信設定
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.mobileconfig')) {
@@ -29,11 +47,18 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
-// オンライン人数カウント
+// Socket.IO 通信処理
 let onlineUsers = 0;
 io.on('connection', (socket) => {
   onlineUsers++;
+  
+  // 新規訪問としてトータルカウントを+1
+  totalVisits++;
+  saveStats();
+
+  // 接続時に現在のオンライン人数とトータル訪問数を送信
   io.emit('userCount', onlineUsers);
+  io.emit('visitCount', totalVisits);
 
   socket.on('disconnect', () => {
     onlineUsers--;
@@ -41,7 +66,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Multer設定（2GBまでの大容量ファイルを許可）
+// Multer設定（2GB対応）
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
@@ -65,7 +90,6 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
   const extractDir = path.join(UPLOAD_DIR, 'extracted-' + Date.now());
 
   try {
-    // 省メモリでZIP解凍
     await fs.createReadStream(ipaPath)
       .pipe(unzipper.Extract({ path: extractDir }))
       .promise();
@@ -108,12 +132,10 @@ app.post('/upload', upload.single('ipa'), async (req, res) => {
       provisionUrl = `/uploads/${provFileName}`;
     }
 
-    // Renderなどのプロキシ（HTTPS）環境を考慮して強制的に https:// に設定
     const host = req.get('host');
     const baseUrl = `https://${host}`;
     const ipaDownloadUrl = `${baseUrl}/uploads/${fileName}`;
 
-    // iOS OTAで必須のManifest XMLの構造を修正
     const manifestXml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
