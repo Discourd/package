@@ -13,7 +13,8 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST_URL || `http://localhost:${PORT}`;
+// Renderの自動割り当てURL(RENDER_EXTERNAL_URL)を最優先で使用
+const HOST = process.env.RENDER_EXTERNAL_URL || process.env.HOST_URL || `http://localhost:${PORT}`;
 
 // ディレクトリ設定
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
