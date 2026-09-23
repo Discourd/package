@@ -497,11 +497,11 @@
       <div class="stats-bar">
         <div class="stats-item">
           <span class="status-dot"></span>
-          <span>オンライン: <strong id="online-count">0</strong> 人</span>
+          <span>オンライン: <strong id="online-count">1</strong> 人</span>
         </div>
         <div class="stats-item" style="border-left: 1px solid var(--border-color); padding-left: 12px;">
           <i class="fa-solid fa-eye" style="color: var(--text-sub);"></i>
-          <span>総訪問数: <strong id="total-visits">0</strong> 回</span>
+          <span>総訪問数: <strong id="total-visits">1</strong> 回</span>
         </div>
       </div>
     </header>
@@ -689,15 +689,18 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
-
-    socket.on('userCount', (count) => {
-      document.getElementById('online-count').innerText = count;
-    });
-
-    socket.on('visitCount', (visits) => {
-      document.getElementById('total-visits').innerText = visits.toLocaleString();
-    });
+    // Socket.IO通信制御（フォールバック処理付き）
+    try {
+      const socket = io();
+      socket.on('userCount', (count) => {
+        document.getElementById('online-count').innerText = count;
+      });
+      socket.on('visitCount', (visits) => {
+        document.getElementById('total-visits').innerText = visits.toLocaleString();
+      });
+    } catch(e) {
+      console.log('Socket.IO connection warning:', e);
+    }
 
     function switchTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -716,7 +719,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // JS内部でアプデログを直接定義（外部JSON依存なしで100%成功）
+    // アプデログデータ構造
     const updateLogsData = [
       {
         version: "Ver 1.3.0",
@@ -855,11 +858,15 @@
       xhr.onload = function() {
         progressContainer.style.display = 'none';
         if (xhr.status === 200) {
-          const data = JSON.parse(xhr.responseText);
-          if (data.success) {
-            showResult(data);
-          } else {
-            showError(data.error || '解析に失敗しました');
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (data.success) {
+              showResult(data);
+            } else {
+              showError(data.error || '解析に失敗しました');
+            }
+          } catch(e) {
+            showError('サーバーからのレスポンス解析に失敗しました');
           }
         } else {
           try {
